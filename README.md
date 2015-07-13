@@ -17,7 +17,7 @@ Open your `build.gradle` file for your module _(not the main project version)_.
 
 ```
 dependencies {
-    compile(name:'reflectTools-release', ext:'aar')
+    compile(name:'utilsLib-release', ext:'aar')
 }
 
 repositories {
