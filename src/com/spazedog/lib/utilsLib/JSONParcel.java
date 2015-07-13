@@ -80,7 +80,7 @@ public class JSONParcel implements Parcelable {
 
     protected static byte[] BITWISE_SHIFTS_BYTE = new byte[]{0, 8, 16, 24};
     protected static byte[] BITWISE_SHIFTS_CHAR = new byte[]{0, 16};
-    protected static Pattern JSON_MATCHER = Pattern.compile("^\\[([ildfs]-?[A-Za-z0-9.-_]+=?,?)*\\]$");
+    protected static Pattern JSON_MATCHER = Pattern.compile("^\\[([ildfscb]-?[A-Za-z0-9.-_]+=?,?)*\\]$");
     protected static Pattern JSON_DISASSEMBLER = Pattern.compile(",");
 
     protected static final Map<ClassLoader, Map<String, JSONParcelable.JSONCreator>> mCreatorCache = new HashMap<ClassLoader, Map<String, JSONParcelable.JSONCreator>>();
@@ -90,7 +90,7 @@ public class JSONParcel implements Parcelable {
 
     protected static String decompressString(String data) {
         try {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.decode(data, Base64.NO_WRAP|Base64.URL_SAFE));
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.decode(data, Base64.NO_WRAP | Base64.URL_SAFE));
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             GZIPInputStream gzipStream = new GZIPInputStream(inputStream, 1024);
             byte[] buffer = new byte[1024];
@@ -192,6 +192,12 @@ public class JSONParcel implements Parcelable {
 
                 } else if (type == 'd') {
                     mParceled.add(Double.valueOf(entry.substring(1)));
+
+                } else if (type == 'c') {
+                    mParceled.add((char) ((int) Integer.valueOf(entry.substring(1))));
+
+                } else if (type == 'b') {
+                    mParceled.add(Byte.valueOf(entry.substring(1)));
 
                 } else if (type == 's') {
                     mParceled.add(entry.substring(1));
@@ -802,7 +808,7 @@ public class JSONParcel implements Parcelable {
      * @throws JSONException
      */
     public byte readByte() throws JSONException {
-        return (byte) readInt();
+        return (Byte) mParceled.get(mSeek++);
     }
 
     /**
@@ -815,25 +821,9 @@ public class JSONParcel implements Parcelable {
 
         if (N > 0) {
             byte[] out = new byte[N];
-            int byteCount = BITWISE_SHIFTS_BYTE.length;
-            int dividedSize = (int) (N / byteCount);
-            int remainderSize = (N % byteCount);
-            int arraySize = (dividedSize + (remainderSize > 0 ? 1 : 0));
-            int in = 0;
-            int offset, i, x, y;
 
-            for (i=0, offset=0; i < arraySize; i++, offset+=byteCount) {
-                y = i < dividedSize ? byteCount : remainderSize;
-
-                for (x=0; x < y; x++) {
-                    switch (x) {
-                        case 0:
-                            in = readInt();
-                            out[offset + x] = (byte) in; break;
-
-                        default: out[offset + x] = (byte) (in >>> BITWISE_SHIFTS_BYTE[x]);
-                    }
-                }
+            for (int i=0; i < N; i++) {
+                out[i] = readByte();
             }
 
             return out;
@@ -846,16 +836,20 @@ public class JSONParcel implements Parcelable {
     }
 
     /**
-     * Writes one byte to the {@link JSONParcel} object. <br /><br />
-     *
-     * Avoid this method if you need to write multiple bytes. Instead use {@link #writeByteArray(byte[])}.
-     * It will reduce the {@link Integer} ammount by adding multiple 8bit {@link Byte}'s per 32bit {@link Integer}'s.
+     * Writes one byte to the {@link JSONParcel} object.
      *
      * @param data
      *      The {@link Byte} to write
      */
     public void writeByte(byte data) throws JSONException {
-        writeInt((data & 0xFF));
+        if (mSeek == mParceled.size()) {
+            mParceled.add(data);
+
+        } else {
+            mParceled.set(mSeek, data);
+        }
+
+        mSeek++;
     }
 
     /**
@@ -890,26 +884,8 @@ public class JSONParcel implements Parcelable {
 
                 writeInt(len);
 
-                int byteCount = BITWISE_SHIFTS_BYTE.length;
-                int dividedSize = (int) (len / byteCount);
-                int remainderSize = (len % byteCount);
-                int arraySize = (dividedSize + (remainderSize > 0 ? 1 : 0));
-                int out = 0;
-                int i, x, y;
-
-                for (i=0; i < arraySize; i++, offset+=byteCount) {
-                    y = i < dividedSize ? byteCount : remainderSize;
-
-                    for (x=0; x < y; x++) {
-                        switch (x) {
-                            case 0: out = (data[offset + x] & 0xFF); break;
-                            default: out |= ((data[offset + x] & 0xFF) << BITWISE_SHIFTS_BYTE[x]);
-                        }
-                    }
-
-                    if (y > 0) {
-                        writeInt(out);
-                    }
+                for (int i=offset; i < length; i++) {
+                    writeByte(data[i]);
                 }
 
             } else {
@@ -936,7 +912,7 @@ public class JSONParcel implements Parcelable {
      * @throws JSONException
      */
     public char readChar() throws JSONException {
-        return (char) readInt();
+        return (Character) mParceled.get(mSeek++);
     }
 
     /**
@@ -949,25 +925,9 @@ public class JSONParcel implements Parcelable {
 
         if (N > 0) {
             char[] out = new char[N];
-            int charCount = BITWISE_SHIFTS_CHAR.length;
-            int dividedSize = (int) (N / charCount);
-            int remainderSize = (N % charCount);
-            int arraySize = (dividedSize + (remainderSize > 0 ? 1 : 0));
-            int in = 0;
-            int offset, i, x, y;
 
-            for (i=0, offset=0; i < arraySize; i++, offset+=charCount) {
-                y = i < dividedSize ? charCount : remainderSize;
-
-                for (x=0; x < y; x++) {
-                    switch (x) {
-                        case 0:
-                            in = readInt();
-                            out[offset + x] = (char) in; break;
-
-                        default: out[offset + x] = (char) (in >>> BITWISE_SHIFTS_CHAR[x]);
-                    }
-                }
+            for (int i=0; i < N; i++) {
+                out[i] = readChar();
             }
 
             return out;
@@ -980,16 +940,20 @@ public class JSONParcel implements Parcelable {
     }
 
     /**
-     * Writes one char to the {@link JSONParcel} object. <br /><br />
-     *
-     * Avoid this method if you need to write multiple char's. Instead use {@link #writeCharArray(char[])}.
-     * It will reduce the {@link Integer} ammount by adding multiple 8bit or 16bit {@link Character}'s per 32bit {@link Integer}'s.
+     * Writes one char to the {@link JSONParcel} object.
      *
      * @param data
      *      The {@link Character} to write
      */
     public void writeChar(char data) throws JSONException {
-        writeInt((data & 0xFFFF));
+        if (mSeek == mParceled.size()) {
+            mParceled.add(data);
+
+        } else {
+            mParceled.set(mSeek, data);
+        }
+
+        mSeek++;
     }
 
     /**
@@ -1005,26 +969,8 @@ public class JSONParcel implements Parcelable {
             if (data.length > 0) {
                 writeInt(data.length);
 
-                int charCount = BITWISE_SHIFTS_CHAR.length;
-                int dividedSize = (int) (data.length / charCount);
-                int remainderSize = (data.length % charCount);
-                int arraySize = (dividedSize + (remainderSize > 0 ? 1 : 0));
-                int out = 0;
-                int offset, i, x, y;
-
-                for (i=0, offset=0; i < arraySize; i++, offset+=charCount) {
-                    y = i < dividedSize ? charCount : remainderSize;
-
-                    for (x=0; x < y; x++) {
-                        switch (x) {
-                            case 0: out = (data[offset + x] & 0xFFFF); break;
-                            default: out |= ((data[offset + x] & 0xFFFF) << BITWISE_SHIFTS_CHAR[x]);
-                        }
-                    }
-
-                    if (y > 0) {
-                        writeInt(out);
-                    }
+                for (int i=0; i < data.length; i++) {
+                    writeChar(data[i]);
                 }
 
             } else {
@@ -1710,23 +1656,33 @@ public class JSONParcel implements Parcelable {
         for (int i=0, x=size-1; i < size; i++, x--) {
             Object value = mParceled.get(i);
 
-            if (value instanceof Integer) {
-                builder.append("i");
+            if (value instanceof Byte) {
+                builder.append("b");
+                builder.append(String.valueOf( (int) (((Byte) value) & 0xFF) ));
 
-            } else if (value instanceof Long) {
-                builder.append("l");
+            } else if (value instanceof Character) {
+                builder.append("c");
+                builder.append(String.valueOf( (int) (((Character) value) & 0xFFFF) ));
 
-            } else if (value instanceof Float) {
-                builder.append("f");
+            } else {
+                if (value instanceof Integer) {
+                    builder.append("i");
 
-            } else if (value instanceof Double) {
-                builder.append("d");
+                } else if (value instanceof Long) {
+                    builder.append("l");
 
-            } else if (value instanceof String) {
-                builder.append("s");
+                } else if (value instanceof Float) {
+                    builder.append("f");
+
+                } else if (value instanceof Double) {
+                    builder.append("d");
+
+                } else if (value instanceof String) {
+                    builder.append("s");
+                }
+
+                builder.append(String.valueOf(value));
             }
-
-            builder.append(String.valueOf(value));
 
             if (x > 0) {
                 builder.append(",");
