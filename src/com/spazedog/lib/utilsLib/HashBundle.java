@@ -31,16 +31,11 @@ import com.spazedog.lib.utilsLib.internal.HashBundleCreator_v13;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class HashBundle implements Parcelable, JSONParcelable, Cloneable {
-
-    protected static int PARCEL_VAR_PARCELABLE;
-    protected static int PARCEL_VAR_PARCELABLEARRAY;
-    protected static final int PARCEL_VAR_SET = -512;
+public class HashBundle implements MultiParcelable, Cloneable {
 
     protected final Object mParcelLock = new Object();
 
@@ -82,21 +77,6 @@ public class HashBundle implements Parcelable, JSONParcelable, Cloneable {
 
         } catch (Throwable e) {
             oBundleMapField = null;
-        }
-
-        try {
-            Field parcelableField = Parcel.class.getDeclaredField("VAL_PARCELABLE");
-            parcelableField.setAccessible(true);
-
-            Field parcelableArrayField = Parcel.class.getDeclaredField("VAL_PARCELABLEARRAY");
-            parcelableArrayField.setAccessible(true);
-
-            PARCEL_VAR_PARCELABLE = (Integer) parcelableField.get(null);
-            PARCEL_VAR_PARCELABLEARRAY = (Integer) parcelableArrayField.get(null);
-
-        } catch (Throwable e) {
-            PARCEL_VAR_PARCELABLE = 4;
-            PARCEL_VAR_PARCELABLEARRAY = 16;
         }
     }
 
@@ -304,7 +284,7 @@ public class HashBundle implements Parcelable, JSONParcelable, Cloneable {
                 Object value = mMap.get(key);
 
                 dest.writeString(key);
-                parcelData(value, dest, flags);
+                ParcelHelper.parcelData(value, dest, flags);
             }
 
             int endPos = dest.dataPosition();
@@ -313,54 +293,6 @@ public class HashBundle implements Parcelable, JSONParcelable, Cloneable {
             dest.setDataPosition(sizePos);
             dest.writeInt((endPos - beginPos));
             dest.setDataPosition(endPos);
-        }
-    }
-
-    protected void parcelData(Object value, Parcel dest, int flags) {
-        /*
-         * Parcel#writeValue checks for Maps, Lists and so on before it checks for Parcelable.
-         * So we force it to handle all Parcelable objects as they should, regardless of type.
-         * We also add it's own integer flags to force Parcel#readValue to act the same.
-         */
-        if (value != null && value instanceof Parcelable) {
-            dest.writeInt(PARCEL_VAR_PARCELABLE);
-            dest.writeParcelable((Parcelable) value, flags);
-
-        } else if (value != null && value instanceof Parcelable[]) {
-            dest.writeInt(PARCEL_VAR_PARCELABLEARRAY);
-            dest.writeParcelableArray((Parcelable[]) value, flags);
-
-        } else if (value != null && value instanceof Set) {
-            dest.writeInt(PARCEL_VAR_SET);
-            dest.writeInt(((Set<Object>) value).size());
-
-            for (Object entry : (Set<Object>) value) {
-                parcelData(entry, dest, flags);
-            }
-
-        } else {
-            dest.writeValue(value);
-        }
-    }
-
-    protected Object unparcelData(Parcel source, ClassLoader loader) {
-        int pos = source.dataPosition();
-        int type = source.readInt();
-
-        switch (type) {
-            case PARCEL_VAR_SET:
-                Set<Object> set = new HashSet<Object>();
-                int length = source.readInt();
-
-                for (int i=0; i < length; i++) {
-                    set.add(unparcelData(source, loader));
-                }
-
-                return set;
-
-            default:
-                source.setDataPosition(pos);
-                return source.readValue(loader);
         }
     }
 
@@ -430,7 +362,7 @@ public class HashBundle implements Parcelable, JSONParcelable, Cloneable {
 
                     for (int i=0; i < size; i++) {
                         key = mParcel.readString();
-                        value = unparcelData(mParcel, mClassLoader);
+                        value = ParcelHelper.unparcelData(mParcel, mClassLoader);
 
                         mMap.put(key, value);
                     }
