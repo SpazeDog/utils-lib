@@ -19,15 +19,12 @@
 
 package com.spazedog.lib.utilsLib;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 
 import com.spazedog.lib.utilsLib.JSONParcel.JSONException;
-import com.spazedog.lib.utilsLib.internal.HashBundleCreator;
-import com.spazedog.lib.utilsLib.internal.HashBundleCreator_v13;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -50,17 +47,32 @@ public class HashBundle implements MultiParcelable, Cloneable {
     protected int mDataSize = 0;
     protected boolean mIsParceled = false;
 
-    public static HashBundleCreator CREATOR;
+    public static MultiCreator<HashBundle> CREATOR = new MultiCreator<HashBundle>() {
+
+        @Override
+        public HashBundle createFromParcel(Parcel source) {
+            return new HashBundle(source, getClass().getClassLoader());
+        }
+
+        @Override
+        public HashBundle createFromJSON(JSONParcel source, ClassLoader loader) {
+            try {
+                return new HashBundle(source, loader);
+
+            } catch (JSONException e) {
+                throw new Error(e.getMessage(), e);
+            }
+        }
+
+        @Override
+        public HashBundle[] newArray(int size) {
+            return new HashBundle[size];
+        }
+    };
 
     static {
         oEmptyParcel = Parcel.obtain();
         oEmptyJSONParcel = new JSONParcel();
-
-        /*
-         * We use this little trick to get around the fact that Parcelable.ClassLoaderCreator
-         * was not added until API 13
-         */
-        CREATOR = Build.VERSION.SDK_INT >= 13 ? new HashBundleCreator_v13() : new HashBundleCreator();
 
         try {
             Class<?> bundle = null;
