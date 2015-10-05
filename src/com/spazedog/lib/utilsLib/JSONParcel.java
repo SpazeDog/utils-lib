@@ -80,7 +80,7 @@ public class JSONParcel implements Parcelable {
 
     protected static byte[] BITWISE_SHIFTS_BYTE = new byte[]{0, 8, 16, 24};
     protected static byte[] BITWISE_SHIFTS_CHAR = new byte[]{0, 16};
-    protected static Pattern JSON_MATCHER = Pattern.compile("^\\[(((s[A-Za-z0-9\\-_]+=*)|([df][0-9.]+)|([ilcb][0-9]+)),?)*\\]$");
+    protected static Pattern JSON_MATCHER = Pattern.compile("^((s[A-Za-z0-9\\-_]+=*)|([df]-?[0-9.Ee]+)|([ilcb]-?[0-9]+))$");
     protected static Pattern JSON_DISASSEMBLER = Pattern.compile(",");
 
     protected static final Map<ClassLoader, Map<String, JSONParcelable.JSONCreator>> mCreatorCache = new HashMap<ClassLoader, Map<String, JSONParcelable.JSONCreator>>();
@@ -175,35 +175,45 @@ public class JSONParcel implements Parcelable {
     public JSONParcel(String json, Context context) throws JSONException {
         this(context);
 
-        if (JSON_MATCHER.matcher(json).matches()) {
-            String[] entries = JSON_DISASSEMBLER.split(json.substring(1, json.length()-1));
+        if (json != null && json.length() >= 2 && json.charAt(0) == '[' && json.charAt(json.length()-1) == ']') {
+            String entry;
 
-            for (String entry : entries) {
-                char type = entry.charAt(0);
+            for (int s=1, e=s, l=json.length()-1; s < l; s=e+1) {
+                e=json.indexOf(',', s);
 
-                if (type == 'i') {
-                    mParceled.add(Integer.valueOf(entry.substring(1)));
+                if (e < 0) {
+                    e = l;
+                }
 
-                } else if (type == 'l') {
-                    mParceled.add(Long.valueOf(entry.substring(1)));
+                entry = json.substring(s, e);
 
-                } else if (type == 'f') {
-                    mParceled.add(Float.valueOf(entry.substring(1)));
+                if (JSON_MATCHER.matcher(entry).matches()) {
+                    char type = entry.charAt(0);
 
-                } else if (type == 'd') {
-                    mParceled.add(Double.valueOf(entry.substring(1)));
+                    if (type == 'i') {
+                        mParceled.add(Integer.valueOf(entry.substring(1)));
 
-                } else if (type == 'c') {
-                    mParceled.add((char) ((int) Integer.valueOf(entry.substring(1))));
+                    } else if (type == 'l') {
+                        mParceled.add(Long.valueOf(entry.substring(1)));
 
-                } else if (type == 'b') {
-                    mParceled.add(Byte.valueOf(entry.substring(1)));
+                    } else if (type == 'f') {
+                        mParceled.add(Float.valueOf(entry.substring(1)));
 
-                } else if (type == 's') {
-                    mParceled.add(entry.substring(1));
+                    } else if (type == 'd') {
+                        mParceled.add(Double.valueOf(entry.substring(1)));
+
+                    } else if (type == 'c') {
+                        mParceled.add((char) ((int) Integer.valueOf(entry.substring(1))));
+
+                    } else if (type == 'b') {
+                        mParceled.add(Byte.valueOf(entry.substring(1)));
+
+                    } else {
+                        mParceled.add(entry.substring(1));
+                    }
 
                 } else {
-                    throw new JSONException("The given string contains invalid entries\n" + json);
+                    throw new JSONException("The given string is not a valid JSON string\n" + json);
                 }
             }
 
