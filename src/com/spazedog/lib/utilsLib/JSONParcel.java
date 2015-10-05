@@ -89,45 +89,59 @@ public class JSONParcel implements Parcelable {
     protected Context mContext;
 
     protected static String decompressString(String data) {
-        try {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.decode(data, Base64.NO_WRAP | Base64.URL_SAFE));
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            GZIPInputStream gzipStream = new GZIPInputStream(inputStream, 1024);
-            byte[] buffer = new byte[1024];
-            int bufferSize;
+        if (data.charAt(0) != '-') {
+            try {
+                ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.decode(data.charAt(0) == '+' ? data.substring(1) : data, Base64.NO_WRAP | Base64.URL_SAFE));
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                GZIPInputStream gzipStream = new GZIPInputStream(inputStream, 1024);
+                byte[] buffer = new byte[1024];
+                int bufferSize;
 
-            while ((bufferSize = gzipStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bufferSize);
+                while ((bufferSize = gzipStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bufferSize);
+                }
+
+                gzipStream.close();
+                data = outputStream.toString();
+                outputStream.close();
+
+                return data;
+
+            } catch (IOException e) {
+                throw new Error(e.getMessage(), e);
             }
 
-            gzipStream.close();
-            data = outputStream.toString();
-            outputStream.close();
-
-            return data;
-
-        } catch (IOException e) {
-            throw new Error(e.getMessage(), e);
+        } else {
+            return new String(Base64.decode(data.substring(1), Base64.NO_WRAP | Base64.URL_SAFE));
         }
     }
 
-    protected static String compressString(String data) {
-        try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length());
-            GZIPOutputStream zgipStream = new GZIPOutputStream(outputStream);
+    protected static String compressString(String data, boolean compression) {
+        if (compression) {
             try {
-                zgipStream.write(data.getBytes("UTF-8"));
-            } catch (UnsupportedEncodingException e) {
-                zgipStream.write(data.getBytes());
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length());
+                GZIPOutputStream zgipStream = new GZIPOutputStream(outputStream);
+                try {
+                    zgipStream.write(data.getBytes("UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    zgipStream.write(data.getBytes());
+                }
+                zgipStream.close();
+                data = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP | Base64.URL_SAFE);
+                outputStream.close();
+
+                return "+" + data;
+
+            } catch (IOException e) {
+                throw new Error(e.getMessage(), e);
             }
-            zgipStream.close();
-            data = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP|Base64.URL_SAFE);
-            outputStream.close();
 
-            return data;
-
-        } catch (IOException e) {
-            throw new Error(e.getMessage(), e);
+        } else {
+            try {
+                return "-" + Base64.encodeToString(data.getBytes("UTF-8"), Base64.NO_WRAP | Base64.URL_SAFE);
+            } catch (UnsupportedEncodingException e) {
+                return "-" + Base64.encodeToString(data.getBytes(), Base64.NO_WRAP | Base64.URL_SAFE);
+            }
         }
     }
 
@@ -485,6 +499,10 @@ public class JSONParcel implements Parcelable {
         return null;
     }
 
+    public void writeString(String data) throws JSONException {
+        writeString(data, false);
+    }
+
     /**
      * Compresses and writes the given {@link String} as encoded {@link Byte}[] to the parcel
      *
@@ -493,15 +511,15 @@ public class JSONParcel implements Parcelable {
      *
      * @throws JSONException
      */
-    public void writeString(String data) throws JSONException {
+    public void writeString(String data, boolean compression) throws JSONException {
         if (data != null) {
             writeInt(1);
 
            if (mSeek == mParceled.size()) {
-                mParceled.add(compressString(data));
+                mParceled.add(compressString(data, compression));
 
             } else {
-                mParceled.set(mSeek, compressString(data));
+                mParceled.set(mSeek, compressString(data, compression));
             }
 
             mSeek++;
@@ -509,6 +527,10 @@ public class JSONParcel implements Parcelable {
         } else {
             writeInt(0);
         }
+    }
+
+    public void writeStringArray(String[] data) throws JSONException {
+        writeStringArray(data, false);
     }
 
     /**
@@ -519,12 +541,12 @@ public class JSONParcel implements Parcelable {
      *
      * @throws JSONException
      */
-    public void writeStringArray(String[] data) throws JSONException {
+    public void writeStringArray(String[] data, boolean compression) throws JSONException {
         if (data != null) {
             writeInt(data.length);
 
             for (int i=0; i < data.length; i++) {
-                writeString(data[i]);
+                writeString(data[i], compression);
             }
 
         } else {
