@@ -80,7 +80,7 @@ public class JSONParcel implements Parcelable {
 
     protected static byte[] BITWISE_SHIFTS_BYTE = new byte[]{0, 8, 16, 24};
     protected static byte[] BITWISE_SHIFTS_CHAR = new byte[]{0, 16};
-    protected static Pattern JSON_MATCHER = Pattern.compile("^((s[A-Za-z0-9\\-_]+=*)|([df]-?[0-9.Ee]+)|([ilcb]-?[0-9]+))$");
+    protected static Pattern JSON_MATCHER = Pattern.compile("^((s[A-Za-z0-9\\+\\-_]+=*)|([df]-?[0-9.Ee]+)|([ilcb]-?[0-9]+))$");
     protected static Pattern JSON_DISASSEMBLER = Pattern.compile(",");
 
     protected static final Map<ClassLoader, Map<String, JSONParcelable.JSONCreator>> mCreatorCache = new HashMap<ClassLoader, Map<String, JSONParcelable.JSONCreator>>();
