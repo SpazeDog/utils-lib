@@ -120,7 +120,7 @@ public class HashBundle implements MultiParcelable, Cloneable {
      *      The value for the entry
      */
     public HashBundle(String key, Object value) {
-        super();
+        this();
         put(key, value);
     }
 
