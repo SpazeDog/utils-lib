@@ -24,6 +24,9 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.Resources.Theme;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.support.annotation.AttrRes;
 import android.support.annotation.RawRes;
 
@@ -71,6 +74,44 @@ public class Conversion {
         a.recycle();
 
         return res;
+    }
+
+    public static Bitmap drawableToBitmap(Drawable drawable) {
+        return drawableToBitmap(drawable, 0f, 0f);
+    }
+
+    public static Bitmap drawableToBitmap(Drawable drawable, float width, float height) {
+        if (drawable != null) {
+            int canvasWidth = 0;
+            int canvasHeight = 0;
+
+            if (width <= 0) {
+                canvasWidth = drawable.getIntrinsicWidth();
+
+            } else {
+                canvasWidth = dipToPixels(width);
+            }
+
+            if (height <= 0) {
+                canvasHeight = drawable.getIntrinsicHeight();
+
+            } else if (width != height) {
+                canvasHeight = dipToPixels(height);
+
+            } else {
+                canvasHeight = canvasWidth;
+            }
+
+            Bitmap bitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+
+            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+            drawable.draw(canvas);
+
+            return bitmap;
+        }
+
+        return null;
     }
 }
 
