@@ -20,7 +20,21 @@
 package com.spazedog.lib.utilsLib.app.logic;
 
 
-public interface FragmentConnector extends MsgBroadcastDelivery, MsgBroadcastReceiver {
+import com.spazedog.lib.utilsLib.HashBundle;
 
-    public ActivityConnector getParentConnector();
+public interface MsgBroadcastReceiver {
+
+    /*
+     * Message types sent by the Activities
+     */
+    public static final int MSG_ACTIVITY_RESULT = -1;
+    public static final int MSG_BACKSTACK_CHANGE = -2;
+    public static final int MSG_FRAGMENT_ATTACHMENT = -3;
+    public static final int MSG_FRAGMENT_DETACHMENT = -4;
+
+    /*
+     * Method that should be overwritten by activity or fragment that needs to
+     * receiver internal messages.
+     */
+    public void onReceiveMessage(int type, HashBundle data, boolean isSticky);
 }

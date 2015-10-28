@@ -28,50 +28,62 @@ import android.content.IntentFilter;
 import android.support.v4.content.LocalBroadcastManager;
 
 import com.spazedog.lib.utilsLib.HashBundle;
+import com.spazedog.lib.utilsLib.app.logic.MsgBroadcastDelivery;
 
-public class MsgContext extends ContextWrapper {
+public class MsgContext extends ContextWrapper implements MsgBroadcastDelivery {
 
-    public interface MsgListener {
-        void onReceiveMessage(int type, HashBundle data, boolean sticky);
+    public interface MsgContextListener {
+        void onReceiveMessage(int type, HashBundle data, boolean sticky, int event);
     }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (mListener != null) {
+                int event = intent.getIntExtra("event", 0);
                 int type = intent.getIntExtra("type", 0);
                 HashBundle data = (HashBundle) intent.getParcelableExtra("data");
                 boolean sticky = intent.getBooleanExtra("sticky", false);
 
-                mListener.onReceiveMessage(type, data, sticky);
+                mListener.onReceiveMessage(type, data, sticky, event);
             }
         }
     };
 
-    protected MsgListener mListener;
+    protected MsgContextListener mListener;
 
     public MsgContext(Context base) {
         super(base.getApplicationContext());
     }
 
     public void sendMessage(int type, String key, Object value) {
-        sendMessage(type, new HashBundle(key, value), false);
+        sendMessage(type, new HashBundle(key, value), false, 0);
     }
 
     public void sendMessage(int type, String key, Object value, boolean sticky) {
-        sendMessage(type, new HashBundle(key, value), sticky);
+        sendMessage(type, new HashBundle(key, value), sticky, 0);
+    }
+
+    @Override
+    public void sendMessage(int type, String key, Object value, boolean sticky, int event) {
+        sendMessage(type, new HashBundle(key, value), sticky, event);
     }
 
     public void sendMessage(int type, HashBundle data, boolean sticky) {
+        sendMessage(type, data, sticky, 0);
+    }
+
+    public void sendMessage(int type, HashBundle data, boolean sticky, int event) {
         Intent intent = new Intent("MsgBroadcaster");
         intent.putExtra("type", type);
         intent.putExtra("sticky", sticky);
         intent.putExtra("data", data);
+        intent.putExtra("event", event);
 
         LocalBroadcastManager.getInstance(getBaseContext()).sendBroadcast(intent);
     }
 
-    public void setMsgListener(MsgListener listener) {
+    public void setMsgListener(MsgContextListener listener) {
         if (listener == null) {
             LocalBroadcastManager.getInstance(getBaseContext()).unregisterReceiver(mMessageReceiver);
 

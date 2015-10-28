@@ -21,6 +21,7 @@ package com.spazedog.lib.utilsLib.app;
 
 
 import android.app.Activity;
+import android.os.Bundle;
 import android.support.v4.app.Fragment;
 
 import com.spazedog.lib.utilsLib.HashBundle;
@@ -30,7 +31,7 @@ import com.spazedog.lib.utilsLib.app.logic.FragmentLogic;
 
 public class MsgFragment extends Fragment implements FragmentConnector {
 
-    private FragmentLogic FL_Logic = new FragmentLogic(this);
+    private FragmentLogic FL_Logic;
 
     @Override
     public void onReceiveMessage(int type, HashBundle data, boolean isSticky) {}
@@ -48,21 +49,32 @@ public class MsgFragment extends Fragment implements FragmentConnector {
 
     @Override
     public final void sendMessage(int type, String key, Object value) {
-        FL_Logic.sendMessage(type, new HashBundle(key, value), false);
+        FL_Logic.sendMessage(type, new HashBundle(key, value), false, 0);
     }
 
     @Override
     public final void sendMessage(int type, String key, Object value, boolean sticky) {
-        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky);
+        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, String key, Object value, boolean sticky, int event) {
+        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky, event);
     }
 
     @Override
     public final void sendMessage(int type, HashBundle data, boolean sticky) {
-        FL_Logic.sendMessage(type, data, false);
+        FL_Logic.sendMessage(type, data, false, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, HashBundle data, boolean sticky, int event) {
+        FL_Logic.sendMessage(type, data, false, event);
     }
 
     @Override
     public void onAttach(Activity activity) {
+        FL_Logic = new FragmentLogic(this);
         FL_Logic.onAttach();
         super.onAttach(activity);
     }
@@ -70,7 +82,7 @@ public class MsgFragment extends Fragment implements FragmentConnector {
     @Override
     public void onDetach() {
         super.onDetach();
-
         FL_Logic.onDetach();
+        FL_Logic = null;
     }
 }

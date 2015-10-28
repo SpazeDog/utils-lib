@@ -22,49 +22,37 @@ package com.spazedog.lib.utilsLib.app.logic;
 
 import com.spazedog.lib.utilsLib.HashBundle;
 
-import java.lang.ref.WeakReference;
-
 public class FragmentLogic {
 
-    private WeakReference<FragmentConnector> FL_Fragment;
+    private FragmentConnector FL_Fragment;
 
     public FragmentLogic(FragmentConnector connector) {
-        FL_Fragment = new WeakReference<FragmentConnector>(connector);
+        FL_Fragment = connector;
     }
 
     public void onAttach() {
-        FragmentConnector connector = FL_Fragment.get();
+        ActivityConnector parent = FL_Fragment.getParentConnector();
 
-        if (connector != null) {
-            ActivityConnector parent = connector.getParentConnector();
-
-            if (parent != null) {
-                parent.onFragmentAttachment(connector);
-            }
+        if (parent != null) {
+            parent.onFragmentAttachment(FL_Fragment);
         }
     }
 
     public void onDetach() {
-        FragmentConnector connector = FL_Fragment.get();
+        ActivityConnector parent = FL_Fragment.getParentConnector();
 
-        if (connector != null) {
-            ActivityConnector parent = connector.getParentConnector();
-
-            if (parent != null) {
-                parent.onFragmentDetachment(connector);
-            }
+        if (parent != null) {
+            parent.onFragmentDetachment(FL_Fragment);
         }
+
+        FL_Fragment = null;
     }
 
-    public void sendMessage(int type, HashBundle data, boolean sticky) {
-        FragmentConnector connector = FL_Fragment.get();
+    public void sendMessage(int type, HashBundle data, boolean sticky, int event) {
+        ActivityConnector parent = FL_Fragment.getParentConnector();
 
-        if (connector != null) {
-            ActivityConnector parent = connector.getParentConnector();
-
-            if (parent != null) {
-                parent.sendMessage(type, data, sticky);
-            }
+        if (parent != null) {
+            parent.sendMessage(type, data, sticky, event);
         }
     }
 }

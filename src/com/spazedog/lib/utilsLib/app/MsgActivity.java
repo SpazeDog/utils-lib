@@ -32,7 +32,7 @@ import com.spazedog.lib.utilsLib.app.logic.FragmentConnector;
 
 public class MsgActivity extends AppCompatActivity implements ActivityConnector<AppCompatActivity> {
 
-    private ActivityLogic AL_Logic = new ActivityLogic(this);
+    private ActivityLogic AL_Logic;
 
     @Override
     public MsgActivity getActivity() {
@@ -41,14 +41,46 @@ public class MsgActivity extends AppCompatActivity implements ActivityConnector<
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        AL_Logic = new ActivityLogic(this);
         AL_Logic.onCreate();
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onRestart() {
+        AL_Logic.onRestart();
+        super.onRestart();
+    }
+
+    @Override
+    protected void onStart() {
+        AL_Logic.onStart();
+        super.onStart();
+    }
+
+    @Override
+    protected void onResume() {
+        AL_Logic.onResume();
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AL_Logic.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        AL_Logic.onStop();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         AL_Logic.onDestroy();
+        AL_Logic = null;
     }
 
     @Override
@@ -71,16 +103,26 @@ public class MsgActivity extends AppCompatActivity implements ActivityConnector<
 
     @Override
     public final void sendMessage(int type, String key, Object value) {
-        AL_Logic.sendMessage(type, new HashBundle(key, value), false);
+        AL_Logic.sendMessage(type, new HashBundle(key, value), false, 0);
     }
 
     @Override
     public final void sendMessage(int type, String key, Object value, boolean sticky) {
-        AL_Logic.sendMessage(type, new HashBundle(key, value), sticky);
+        AL_Logic.sendMessage(type, new HashBundle(key, value), sticky, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, String key, Object value, boolean sticky, int event) {
+        AL_Logic.sendMessage(type, new HashBundle(key, value), sticky, event);
     }
 
     @Override
     public final void sendMessage(int type, HashBundle data, boolean sticky) {
-        AL_Logic.sendMessage(type, data, false);
+        AL_Logic.sendMessage(type, data, false, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, HashBundle data, boolean sticky, int event) {
+        AL_Logic.sendMessage(type, data, false, event);
     }
 }

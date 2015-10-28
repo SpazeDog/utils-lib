@@ -22,7 +22,7 @@ package com.spazedog.lib.utilsLib.app.logic;
 import android.support.v4.app.FragmentActivity;
 
 
-public interface ActivityConnector<T extends FragmentActivity> extends MsgBroadcaster {
+public interface ActivityConnector<T extends FragmentActivity> extends MsgBroadcastDelivery, MsgBroadcastReceiver {
 
     public void onFragmentAttachment(FragmentConnector connector);
     public void onFragmentDetachment(FragmentConnector connector);

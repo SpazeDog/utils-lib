@@ -40,7 +40,7 @@ import com.spazedog.lib.utilsLib.utils.Conversion;
 
 public class MsgFragmentDialog extends DialogFragment implements FragmentConnector {
 
-    private FragmentLogic FL_Logic = new FragmentLogic(this);
+    private FragmentLogic FL_Logic;
 
     public MsgFragmentDialog() {
         setArguments(new Bundle());
@@ -114,21 +114,32 @@ public class MsgFragmentDialog extends DialogFragment implements FragmentConnect
 
     @Override
     public final void sendMessage(int type, String key, Object value) {
-        FL_Logic.sendMessage(type, new HashBundle(key, value), false);
+        FL_Logic.sendMessage(type, new HashBundle(key, value), false, 0);
     }
 
     @Override
     public final void sendMessage(int type, String key, Object value, boolean sticky) {
-        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky);
+        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, String key, Object value, boolean sticky, int event) {
+        FL_Logic.sendMessage(type, new HashBundle(key, value), sticky, event);
     }
 
     @Override
     public final void sendMessage(int type, HashBundle data, boolean sticky) {
-        FL_Logic.sendMessage(type, data, false);
+        FL_Logic.sendMessage(type, data, false, 0);
+    }
+
+    @Override
+    public final void sendMessage(int type, HashBundle data, boolean sticky, int event) {
+        FL_Logic.sendMessage(type, data, false, event);
     }
 
     @Override
     public void onAttach(Activity activity) {
+        FL_Logic = new FragmentLogic(this);
         FL_Logic.onAttach();
         super.onAttach(activity);
     }
@@ -137,6 +148,7 @@ public class MsgFragmentDialog extends DialogFragment implements FragmentConnect
     public void onDetach() {
         super.onDetach();
         FL_Logic.onDetach();
+        FL_Logic = null;
     }
 
     @Override

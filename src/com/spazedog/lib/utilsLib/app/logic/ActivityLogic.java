@@ -20,23 +20,24 @@
 package com.spazedog.lib.utilsLib.app.logic;
 
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Handler;
-import android.os.Message;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager.OnBackStackChangedListener;
+import android.util.Log;
 
 import com.spazedog.lib.utilsLib.HashBundle;
-import com.spazedog.lib.utilsLib.SparseMap;
 import com.spazedog.lib.utilsLib.app.MsgContext;
-import com.spazedog.lib.utilsLib.app.MsgContext.MsgListener;
+import com.spazedog.lib.utilsLib.app.MsgContext.MsgContextListener;
 
-import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ActivityLogic {
 
@@ -45,27 +46,84 @@ public class ActivityLogic {
     public static final int MSG_FRAGMENT_ATTACHMENT = -3;
     public static final int MSG_FRAGMENT_DETACHMENT = -4;
 
-    protected Set<FragmentConnector> AL_Fragments = Collections.newSetFromMap(new WeakHashMap<FragmentConnector, Boolean>());
-    protected Map<Integer, HashBundle> AL_StickyMsg = new SparseMap<HashBundle>();
-    protected WeakReference<ActivityConnector<?>> AL_Activity;
-    protected Handler AL_Handler;
-    protected MsgContext mContext;
+    protected static final int FLAG_CREATE = 0x00000001;
+    protected static final int FLAG_START = 0x00000002;
+    protected static final int FLAG_RESUME = 0x00000004;
+    protected static final int FLAG_PAUSE = 0x00000008;
+    protected static final int FLAG_STOP = 0x00000010;
 
-    private MsgListener mMessageReceiver = new MsgListener() {
+    protected class StateRunnable implements Runnable {
+
+        private final int mState;
+
+        public StateRunnable(int state) {
+            mState = state;
+        }
+
         @Override
-        public void onReceiveMessage(int type, HashBundle data, boolean sticky) {
+        public void run() {
+            AL_STATE = mState;
+
+            for (MsgContainer msg : AL_MSGS.values()) {
+                if (!msg.INVOKED && msg.EVENT != 0 && (AL_STATE & msg.EVENT) == msg.EVENT) {
+                    Set<MsgBroadcastReceiver> broadcasters = getBroadcasterSet();
+
+                    msg.INVOKED = true;
+                    int type = msg.TYPE;
+                    HashBundle data = msg.DATA;
+
+                    if (!msg.STICKY) {
+                        AL_MSGS.remove(type);
+                    }
+
+                    for (MsgBroadcastReceiver broadcaster : broadcasters) {
+                        broadcaster.onReceiveMessage(type, data, false);
+                    }
+                }
+            }
+        }
+    }
+
+    private MsgContextListener mMessageReceiver = new MsgContextListener() {
+        @Override
+        public void onReceiveMessage(int type, HashBundle data, boolean sticky, int event) {
             synchronized(AL_Fragments) {
-                if (sticky) {
-                    AL_StickyMsg.put(type, data);
+                if (sticky || (event != 0 && (AL_STATE & event) != event)) {
+                    MsgContainer msg = AL_MSGS.get(type);
+
+                    if (msg == null) {
+                        msg = new MsgContainer();
+                    }
+
+                    msg.INVOKED = false;
+                    msg.STICKY = sticky;
+                    msg.EVENT = event;
+                    msg.TYPE = type;
+                    msg.DATA = data;
+
+                    AL_MSGS.put(type, msg);
 
                 } else {
-                    AL_StickyMsg.remove(type);
+                    AL_MSGS.remove(type);
                 }
 
-                Set<MsgBroadcaster> broadcasters = new HashSet<MsgBroadcaster>(AL_Fragments);
-                broadcasters.add(AL_Activity.get());
+                Log.d("LifeCycle Test", "Logic: Receiving message type(" + type + "), data(" + (data != null ? "object" : "null") + "), sticky(" + (sticky ? "true" : "false") + "), event(" + event + ")");
 
-                AL_Handler.obtainMessage(type, new Object[]{broadcasters, data}).sendToTarget();
+                if (event == 0 || (AL_STATE & event) == event) {
+                    final int msgType = type;
+                    final HashBundle msgData = data;
+
+                    AL_Activity.getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Set<MsgBroadcastReceiver> broadcasters = getBroadcasterSet();
+
+                            for (MsgBroadcastReceiver broadcaster : broadcasters) {
+                                broadcaster.onReceiveMessage(msgType, msgData, false);
+                            }
+                        }
+                    });
+                }
             }
         }
     };
@@ -73,42 +131,81 @@ public class ActivityLogic {
     private OnBackStackChangedListener mBackstackListener = new OnBackStackChangedListener() {
         @Override
         public void onBackStackChanged() {
-            sendMessage(-2, null, false);
+            sendMessage(-2, null, false, 0);
         }
     };
 
-    protected class BroadcastHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            Object[] msgObject = (Object[]) msg.obj;
-            Set<MsgBroadcaster> broadcasters = (Set<MsgBroadcaster>) msgObject[0];
-            HashBundle data = (HashBundle) msgObject[1];
-
-            for (MsgBroadcaster broadcaster : broadcasters) {
-                broadcaster.onReceiveMessage(msg.what, data, false);
-            }
-        }
+    protected static class MsgContainer {
+        public boolean INVOKED = false;
+        public boolean STICKY = false;
+        public int TYPE = 0;
+        public int EVENT = 0;
+        public HashBundle DATA;
     }
 
+    protected Runnable AL_RUN_CREATE = new StateRunnable(MsgBroadcastDelivery.EVENT_CREATE);
+    protected Runnable AL_RUN_START = new StateRunnable(MsgBroadcastDelivery.EVENT_START);
+    protected Runnable AL_RUN_RESUME = new StateRunnable(MsgBroadcastDelivery.EVENT_RESUME);
+    protected Runnable AL_RUN_PAUSE = new StateRunnable(MsgBroadcastDelivery.EVENT_PAUSE);
+    protected Runnable AL_RUN_STOP = new StateRunnable(MsgBroadcastDelivery.EVENT_STOP);
+
+    protected Set<FragmentConnector> AL_Fragments = Collections.newSetFromMap(new WeakHashMap<FragmentConnector, Boolean>());
+    protected Map<Integer, MsgContainer> AL_MSGS = new ConcurrentHashMap<Integer, MsgContainer>();
+    protected ActivityConnector<?> AL_Activity;
+    protected Handler AL_Handler;
+    protected MsgContext AL_Context;
+    protected int AL_STATE = 0;
+
     public ActivityLogic(ActivityConnector connector) {
-        AL_Activity = new WeakReference<ActivityConnector<?>>(connector);
-        AL_Handler = new BroadcastHandler();
+        AL_Activity = connector;
     }
 
     public void onCreate() {
-        FragmentActivity activity = AL_Activity.get().getActivity();
+        AL_Handler = getMainHandler();
+
+        AL_STATE = MsgBroadcastDelivery.EVENT_CREATE & ~FLAG_CREATE;
+        AL_Handler.post(AL_RUN_CREATE);
+
+        FragmentActivity activity = AL_Activity.getActivity();
         activity.getSupportFragmentManager().addOnBackStackChangedListener(mBackstackListener);
 
-        mContext = new MsgContext(activity);
-        mContext.setMsgListener(mMessageReceiver);
+        AL_Context = new MsgContext(activity);
+        AL_Context.setMsgListener(mMessageReceiver);
+    }
+
+    public void onRestart() {
+        AL_STATE = MsgBroadcastDelivery.EVENT_CREATE;
+    }
+
+    public void onStart() {
+        AL_STATE = MsgBroadcastDelivery.EVENT_START & ~FLAG_START;
+        AL_Handler.post(AL_RUN_START);
+    }
+
+    public void onResume() {
+        AL_STATE = MsgBroadcastDelivery.EVENT_RESUME & ~FLAG_RESUME;
+        AL_Handler.post(AL_RUN_RESUME);
+    }
+
+    public void onPause() {
+        AL_STATE = MsgBroadcastDelivery.EVENT_PAUSE & ~FLAG_PAUSE;
+        AL_Handler.post(AL_RUN_PAUSE);
+    }
+
+    public void onStop() {
+        AL_STATE = MsgBroadcastDelivery.EVENT_STOP & ~FLAG_STOP;
+        AL_Handler.post(AL_RUN_STOP);
     }
 
     public void onDestroy() {
-        FragmentActivity activity = AL_Activity.get().getActivity();
+        FragmentActivity activity = AL_Activity.getActivity();
         activity.getSupportFragmentManager().removeOnBackStackChangedListener(mBackstackListener);
 
-        mContext.setMsgListener(null);
-        mContext = null;
+        AL_Context.setMsgListener(null);
+        AL_Context = null;
+        AL_Handler = null;
+        AL_Activity = null;
+        AL_MSGS.clear();
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -120,30 +217,75 @@ public class ActivityLogic {
             bundle.putParcelable("intent", data);
         }
 
-        sendMessage(-1, bundle, false);
+        sendMessage(-1, bundle, false, 0);
     }
 
     public void onFragmentAttachment(FragmentConnector connector) {
-        synchronized (AL_Fragments) {
-            sendMessage(-3, null, false);
+        sendMessage(-3, null, false, 0);
 
-            AL_Fragments.add(connector);
+        AL_Fragments.add(connector);
 
-            for (Map.Entry<Integer, HashBundle> entry: AL_StickyMsg.entrySet()) {
-                connector.onReceiveMessage(entry.getKey(), entry.getValue(), true);
-            }
+        if (AL_MSGS.size() > 0) {
+            final FragmentConnector msgConnector = connector;
+
+            AL_Activity.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    for (MsgContainer msg : AL_MSGS.values()) {
+                        if (msg.STICKY && (msg.EVENT == 0 || (AL_STATE & msg.EVENT) == msg.EVENT)) {
+                            msgConnector.onReceiveMessage(msg.TYPE, msg.DATA, true);
+
+                        } else if (msg.STICKY) {
+                            msg.INVOKED = false;
+                        }
+                    }
+                }
+            });
         }
     }
 
     public void onFragmentDetachment(FragmentConnector connector) {
-        synchronized (AL_Fragments) {
-            AL_Fragments.remove(connector);
+        AL_Fragments.remove(connector);
 
-            sendMessage(-4, null, false);
-        }
+        sendMessage(-4, null, false, 0);
     }
 
-    public void sendMessage(int type, HashBundle data, boolean sticky) {
-        mContext.sendMessage(type, data, sticky);
+    public void sendMessage(int type, HashBundle data, boolean sticky, int event) {
+        AL_Context.sendMessage(type, data, sticky, event);
+    }
+
+    protected Set<MsgBroadcastReceiver> getBroadcasterSet() {
+        Set<MsgBroadcastReceiver> broadcasters = new HashSet<MsgBroadcastReceiver>(AL_Fragments);
+        broadcasters.add(AL_Activity);
+
+        return broadcasters;
+    }
+
+    protected Handler getMainHandler() {
+        Activity activity = AL_Activity.getActivity();
+        Class<?> clazz = activity.getClass();
+        Field field = null;
+
+        do {
+            try {
+                field = clazz.getDeclaredField("mHandler");
+
+            }  catch (NoSuchFieldException e) {}
+
+        } while (field == null && (clazz = clazz.getSuperclass()) != null);
+
+        if (field != null) {
+            field.setAccessible(true);
+
+            try {
+                return (Handler) field.get(activity);
+
+            } catch (IllegalAccessException e) {}
+        }
+
+        /*
+         * Not what we need, but better than NULL
+         */
+        return new Handler();
     }
 }

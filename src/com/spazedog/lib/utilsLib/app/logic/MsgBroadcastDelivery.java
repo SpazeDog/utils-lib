@@ -20,19 +20,18 @@
 package com.spazedog.lib.utilsLib.app.logic;
 
 
-import android.content.Context;
-import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
-
 import com.spazedog.lib.utilsLib.HashBundle;
 
-public interface MsgBroadcaster {
+public interface MsgBroadcastDelivery {
 
     /*
-     * Method that should be overwritten by activity or fragment that needs to
-     * receiver internal messages.
+     * Supported Events
      */
-    public void onReceiveMessage(int type, HashBundle data, boolean isSticky);
+    public static int EVENT_CREATE = 0x00000001;
+    public static int EVENT_START = 0x00000003;
+    public static int EVENT_RESUME = 0x00000007;
+    public static int EVENT_PAUSE = 0x0000000F;
+    public static int EVENT_STOP = 0x0000001F;
 
     /*
      * Quick send a single data set to all receivers
@@ -45,7 +44,17 @@ public interface MsgBroadcaster {
     public void sendMessage(int type, String key, Object value, boolean sticky);
 
     /*
+     * Quick send a single data set to all receivers at a specific event
+     */
+    public void sendMessage(int type, String key, Object value, boolean sticky, int event);
+
+    /*
      * Send a {@link HashBundle} to all receivers
      */
     public void sendMessage(int type, HashBundle data, boolean sticky);
+
+    /*
+     * Send a {@link HashBundle} to all receivers at a specific event
+     */
+    public void sendMessage(int type, HashBundle data, boolean sticky, int event);
 }
