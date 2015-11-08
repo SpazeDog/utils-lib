@@ -34,6 +34,9 @@ import java.util.Set;
 
 public class HashBundle implements MultiParcelable, Cloneable {
 
+    public static final int PARCEL_ANDROID = 1;
+    public static final int PARCEL_JSON = 2;
+
     protected final Object mParcelLock = new Object();
 
     protected static Field oBundleMapField;
@@ -94,13 +97,6 @@ public class HashBundle implements MultiParcelable, Cloneable {
 
     protected HashMap<String, Object> createNewMap() {
         return new HashMap<String, Object>();
-    }
-
-    /**
-     * @hide
-     */
-    public boolean isParceled() {
-        return mIsParceled;
     }
 
     /**
@@ -281,29 +277,17 @@ public class HashBundle implements MultiParcelable, Cloneable {
             dest.appendFrom(mParcel, 0, size);
 
         } else {
-            if (mIsParceled) {
-                unparcel();
-            }
+            int sizePos = dest.dataPosition();      // Position where our data begins
+            int beginPos = sizePos + 2;             // Position where the actual Map data begins
+            dest.writeInt(-1);                      // Placeholder for the total size of our data
 
-            int sizePos = dest.dataPosition();
-            dest.writeInt(-1); // Placeholder
-            dest.writeInt(mMap.size());
-
-            int beginPos = dest.dataPosition();
-            Set<String> keys = mMap.keySet();
-
-            for (String key : keys) {
-                Object value = mMap.get(key);
-
-                dest.writeString(key);
-                ParcelHelper.parcelData(value, dest, flags);
-            }
+            parcel(dest, 0);
 
             int endPos = dest.dataPosition();
 
             // Add the parcel size to the parcel
             dest.setDataPosition(sizePos);
-            dest.writeInt((endPos - beginPos));
+            dest.writeInt((endPos - beginPos));     // Write the size of our data
             dest.setDataPosition(endPos);
         }
     }
@@ -328,37 +312,95 @@ public class HashBundle implements MultiParcelable, Cloneable {
             dest.appendFrom(mJSONParcel, 0, size);
 
         } else {
-            if (mIsParceled) {
-                unparcel();
-            }
+            int sizePos = dest.getDataPosition();   // Position where our data begins
+            int beginPos = sizePos + 2;             // Position where the actual Map data begins
+            dest.writeInt(-1);                      // Placeholder for the total size of our data
 
-            int sizePos = dest.getDataPosition();
-            dest.writeInt(-1); // Placeholder
-            dest.writeInt(mMap.size());
-
-            int beginPos = dest.getDataPosition();
-            Set<String> keys = mMap.keySet();
-
-            for (String key : keys) {
-                Object value = mMap.get(key);
-
-                dest.writeString(key);
-                dest.writeValue(value);
-            }
+            parcel(dest, 0);
 
             int endPos = dest.getDataPosition();
 
             // Add the parcel size to the parcel
             dest.setDataPosition(sizePos);
-            dest.writeInt((endPos - beginPos));
+            dest.writeInt((endPos - beginPos));     // Write the size of our data
             dest.setDataPosition(endPos);
         }
     }
 
-    /**
-     * Internal method that will unparcel the stored {@link Parcel} or {@link JSONParcel}
-     */
-    protected void unparcel() {
+    protected void parcel(Object dest, int flags) {
+        int parcelType = dest instanceof Parcel ? PARCEL_ANDROID : PARCEL_JSON;
+
+        if (mIsParceled) {
+            unparcel();
+        }
+
+        Set<String> keys = mMap.keySet();
+
+        switch (parcelType) {
+            case PARCEL_ANDROID:
+                Parcel parcel = (Parcel) dest;
+                parcel.writeInt(mMap.size());
+
+                for (String key : keys) {
+                    Object value = mMap.get(key);
+
+                    parcel.writeString(key);
+                    ParcelHelper.parcelData(value, parcel, flags);
+                }
+
+                break;
+
+            case PARCEL_JSON:
+                try {
+                    JSONParcel jsonParcel = (JSONParcel) dest;
+                    jsonParcel.writeInt(mMap.size());
+
+                    for (String key : keys) {
+                        Object value = mMap.get(key);
+
+                        jsonParcel.writeString(key);
+                        jsonParcel.writeValue(value);
+                    }
+
+                } catch (JSONException e) {
+                    throw new Error(e.getMessage(), e);
+                }
+        }
+    }
+
+    public void parcel(int parcelType) {
+        switch (parcelType) {
+            case PARCEL_ANDROID:
+                if (mParcel == null) {
+                    Parcel parcel = Parcel.obtain();
+                    parcel(parcel, 0);
+                    parcel.setDataPosition(0);
+
+                    mParcel = parcel;
+                }
+
+                break;
+
+            case PARCEL_JSON:
+                if (mJSONParcel == null) {
+                    JSONParcel jsonParcel = new JSONParcel();
+                    parcel(jsonParcel, 0);
+                    jsonParcel.setDataPosition(0);
+
+                    mJSONParcel = jsonParcel;
+                }
+        }
+
+        if (mMap != null) {
+            mDataSize = mMap.size();
+            mMap.clear();
+        }
+
+        mIsParceled = true;
+    }
+
+
+    public void unparcel() {
         synchronized (mParcelLock) {
             if (mMap == null) {
                 mMap = createNewMap();
@@ -417,6 +459,14 @@ public class HashBundle implements MultiParcelable, Cloneable {
              */
             mIsParceled = false;
         }
+    }
+
+    public boolean isParceled() {
+        return mIsParceled;
+    }
+
+    public boolean isParceled(int parcelType) {
+        return mIsParceled && ((parcelType == PARCEL_ANDROID && mParcel != null) || (parcelType == PARCEL_JSON && mJSONParcel != null));
     }
 
     /**
