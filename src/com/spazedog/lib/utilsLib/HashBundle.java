@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class HashBundle implements MultiParcelable, Cloneable {
+public class HashBundle extends MultiParcelableBuilder implements Cloneable {
 
     public static final int PARCEL_ANDROID = 1;
     public static final int PARCEL_JSON = 2;
@@ -49,29 +49,6 @@ public class HashBundle implements MultiParcelable, Cloneable {
     protected ClassLoader mClassLoader = null;
     protected int mDataSize = 0;
     protected boolean mIsParceled = false;
-
-    public static MultiCreator<HashBundle> CREATOR = new MultiCreator<HashBundle>() {
-
-        @Override
-        public HashBundle createFromParcel(Parcel source) {
-            return new HashBundle(source, getClass().getClassLoader());
-        }
-
-        @Override
-        public HashBundle createFromJSON(JSONParcel source, ClassLoader loader) {
-            try {
-                return new HashBundle(source, loader);
-
-            } catch (JSONException e) {
-                throw new Error(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public HashBundle[] newArray(int size) {
-            return new HashBundle[size];
-        }
-    };
 
     static {
         oEmptyParcel = Parcel.obtain();
@@ -248,6 +225,10 @@ public class HashBundle implements MultiParcelable, Cloneable {
         }
     }
 
+    public void setClassLoader(ClassLoader loader) {
+        mClassLoader = loader;
+    }
+
     /**
      * Demanded by {@link Parcelable}
      */
@@ -267,6 +248,8 @@ public class HashBundle implements MultiParcelable, Cloneable {
      */
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+        super.writeToParcel(dest, flags);
+
         if (size() == 0) {
             dest.writeInt(0);
 
@@ -302,6 +285,8 @@ public class HashBundle implements MultiParcelable, Cloneable {
      */
     @Override
     public void writeToJSON(JSONParcel dest) throws JSONException {
+        super.writeToJSON(dest);
+
         if (size() == 0) {
             dest.writeInt(0);
 
@@ -345,7 +330,7 @@ public class HashBundle implements MultiParcelable, Cloneable {
                     Object value = mMap.get(key);
 
                     parcel.writeString(key);
-                    ParcelHelper.parcelData(value, parcel, flags);
+                    parcelData(value, parcel, flags);
                 }
 
                 break;
@@ -399,7 +384,6 @@ public class HashBundle implements MultiParcelable, Cloneable {
         mIsParceled = true;
     }
 
-
     public void unparcel() {
         synchronized (mParcelLock) {
             if (mMap == null) {
@@ -416,7 +400,7 @@ public class HashBundle implements MultiParcelable, Cloneable {
 
                     for (int i=0; i < size; i++) {
                         key = mParcel.readString();
-                        value = ParcelHelper.unparcelData(mParcel, mClassLoader);
+                        value = unparcelData(mParcel, mClassLoader);
 
                         mMap.put(key, value);
                     }

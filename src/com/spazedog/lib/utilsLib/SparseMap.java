@@ -33,7 +33,7 @@ import java.util.Set;
  * it can only store values using {@link Integer} as key.
  * The principle used here is based on Android's {@link android.util.SparseArray}
  */
-public class SparseMap<T> implements Map<Integer, T>, MultiParcelable {
+public class SparseMap<T> extends MultiParcelableBuilder implements Map<Integer, T> {
 
     protected static final Object GC = new Object();
     protected static final Object[] OBJARRAY = new Object[0];
@@ -384,7 +384,7 @@ public class SparseMap<T> implements Map<Integer, T>, MultiParcelable {
 
         for (int i=0; i < size; i++) {
             mMapKeys[i] = source.readInt();
-            mMapValues[i] = ParcelHelper.unparcelData(source, loader);
+            mMapValues[i] = unparcelData(source, loader);
         }
 
         mMapSize = size;
@@ -392,6 +392,8 @@ public class SparseMap<T> implements Map<Integer, T>, MultiParcelable {
 
     @Override
     public void writeToJSON(JSONParcel dest) throws JSONParcel.JSONException {
+        super.writeToJSON(dest);
+
         if (mGCSize > 0) {
             gc();
         }
@@ -406,6 +408,8 @@ public class SparseMap<T> implements Map<Integer, T>, MultiParcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+        super.writeToParcel(dest, flags);
+
         if (mGCSize > 0) {
             gc();
         }
@@ -414,30 +418,7 @@ public class SparseMap<T> implements Map<Integer, T>, MultiParcelable {
 
         for (int i=0; i < mMapSize; i++) {
             dest.writeInt(mMapKeys[i]);
-            ParcelHelper.parcelData(mMapValues[i], dest, flags);
+            parcelData(mMapValues[i], dest, flags);
         }
     }
-
-    public static MultiCreator<SparseMap> CREATOR = new MultiCreator<SparseMap>() {
-
-        @Override
-        public SparseMap createFromJSON(JSONParcel source, ClassLoader loader) {
-            try {
-                return new SparseMap(source, loader);
-
-            } catch (JSONParcel.JSONException e) {
-                throw new RuntimeException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public SparseMap createFromParcel(Parcel source) {
-            return new SparseMap(source, getClass().getClassLoader());
-        }
-
-        @Override
-        public SparseMap[] newArray(int size) {
-            return new SparseMap[size];
-        }
-    };
 }

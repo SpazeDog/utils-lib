@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
  * Light Weight {@link List} with a small Garbage Collector to reduce the
  * ammount of times having to re-organize the data array
  */
-public class SparseList<T> implements List<T>, MultiParcelable {
+public class SparseList<T> extends MultiParcelableBuilder implements List<T> {
 
     protected static final Object GC = new Object();
     protected static final Object[] OBJARRAY = new Object[0];
@@ -463,7 +463,7 @@ public class SparseList<T> implements List<T>, MultiParcelable {
         instantiate(size);
 
         for (int i=0; i < size; i++) {
-            mListValues[i] = ParcelHelper.unparcelData(source, loader);
+            mListValues[i] = unparcelData(source, loader);
         }
 
         mListSize = size;
@@ -471,6 +471,8 @@ public class SparseList<T> implements List<T>, MultiParcelable {
 
     @Override
     public void writeToJSON(JSONParcel dest) throws JSONParcel.JSONException {
+        super.writeToJSON(dest);
+
         if (mGCSize > 0) {
             gc();
         }
@@ -484,6 +486,8 @@ public class SparseList<T> implements List<T>, MultiParcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+        super.writeToParcel(dest, flags);
+
         if (mGCSize > 0) {
             gc();
         }
@@ -491,32 +495,9 @@ public class SparseList<T> implements List<T>, MultiParcelable {
         dest.writeInt(mListSize);
 
         for (int i=0; i < mListSize; i++) {
-            ParcelHelper.parcelData(mListValues[i], dest, flags);
+            parcelData(mListValues[i], dest, flags);
         }
     }
-
-    public static MultiCreator<SparseList> CREATOR = new MultiCreator<SparseList>() {
-
-        @Override
-        public SparseList createFromJSON(JSONParcel source, ClassLoader loader) {
-            try {
-                return new SparseList(source, loader);
-
-            } catch (JSONParcel.JSONException e) {
-                throw new RuntimeException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public SparseList createFromParcel(Parcel source) {
-            return new SparseList(source, getClass().getClassLoader());
-        }
-
-        @Override
-        public SparseList[] newArray(int size) {
-            return new SparseList[size];
-        }
-    };
 
     protected class SparseIterator implements ListIterator<T> {
 

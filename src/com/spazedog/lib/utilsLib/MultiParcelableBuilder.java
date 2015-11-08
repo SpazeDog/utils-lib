@@ -49,7 +49,7 @@ public abstract class MultiParcelableBuilder implements MultiParcelable {
         return ParcelHelper.unparcelData(source, loader);
     }
 
-    public static final MultiCreator<MultiParcelable> CREATOR = new MultiCreator<MultiParcelable>() {
+    public static final MultiClassLoaderCreator<MultiParcelable> CREATOR = new MultiClassLoaderCreator<MultiParcelable>() {
 
         @Override
         public MultiParcelable createFromJSON(JSONParcel source, ClassLoader loader) throws JSONException, RuntimeException {
@@ -67,15 +67,32 @@ public abstract class MultiParcelableBuilder implements MultiParcelable {
 
         @Override
         public MultiParcelable createFromParcel(Parcel source) throws RuntimeException {
+            return createFromParcel(source, getClass().getClassLoader());
+        }
+
+        @Override
+        public MultiParcelable createFromParcel(Parcel source, ClassLoader classLoader) throws RuntimeException {
+            String className = source.readString();
+            Class<?> clazz = null;
+            Constructor<?> constrcutor = null;
+
             try {
-                Class<?> clazz = Class.forName(source.readString(), true, MultiParcelableBuilder.class.getClassLoader());
-                Constructor<?> constrcutor = clazz.getDeclaredConstructor(Parcel.class, ClassLoader.class);
+                clazz = classLoader != null ? Class.forName(className, true, classLoader) : Class.forName(className);
+                constrcutor = clazz.getDeclaredConstructor(Parcel.class, ClassLoader.class);
                 constrcutor.setAccessible(true);
 
-                return (MultiParcelable) constrcutor.newInstance(source, Parcel.class.getClassLoader());
+                return (MultiParcelable) constrcutor.newInstance(source, classLoader);
 
             } catch (Throwable e) {
-                throw new RuntimeException(e.getMessage(), e);
+                try {
+                    constrcutor = clazz.getDeclaredConstructor(Parcel.class);
+                    constrcutor.setAccessible(true);
+
+                    return (MultiParcelable) constrcutor.newInstance(source);
+
+                } catch (Throwable ei) {
+                    throw new RuntimeException(e.getMessage(), e);
+                }
             }
         }
 
