@@ -21,7 +21,9 @@ package com.spazedog.lib.utilsLib;
 
 
 import android.os.Parcel;
+import android.text.TextUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -519,11 +521,12 @@ public class SparseList<T> implements List<T>, MultiParcelable {
     protected class SparseIterator implements ListIterator<T> {
 
         private int mCursor = 0;
+        private int mCurrent = 0;
 
         protected SparseIterator(int index) {
             mCursor = index;
 
-            if (mCursor < 0 || mCursor >= SparseList.this.size()) {
+            if (mCursor < 0 || (mCursor >= SparseList.this.size() && mCursor != 0)) {
                 throw new ArrayIndexOutOfBoundsException("length=" + SparseList.this.size() + "; index=" + mCursor);
             }
         }
@@ -563,34 +566,33 @@ public class SparseList<T> implements List<T>, MultiParcelable {
 
         @Override
         public T next() {
-            int position = mCursor;
+            mCurrent = mCursor;
+            mCursor++;
 
-            if (position >= size()) {
-                if ((position - SparseList.this.size()) > 0 || position > mListValues.length ) {
+            if (mCurrent >= size()) {
+                if ((mCurrent - SparseList.this.size()) > 0 || mCurrent > mListValues.length ) {
                     throw new ConcurrentModificationException();
                 }
 
                 throw new NoSuchElementException();
             }
 
-            mCursor++;
-
-            return SparseList.this.get(position);
+            return SparseList.this.get(mCurrent);
         }
 
         @Override
         public void add(T object) {
-            throw new UnsupportedOperationException();
+            SparseList.this.add(mCurrent, object);
         }
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException();
+            SparseList.this.remove(mCurrent);
         }
 
         @Override
         public void set(T object) {
-            throw new UnsupportedOperationException();
+            SparseList.this.set(mCurrent, object);
         }
     }
 }
