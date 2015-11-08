@@ -3,7 +3,7 @@ apply plugin: 'com.android.library'
 buildDir = '../../build/utilsLib'
 
 android {
-    compileSdkVersion 21
+    compileSdkVersion 22
     buildToolsVersion "22.0.1"
 
     defaultConfig {
@@ -28,6 +28,11 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_6
         targetCompatibility JavaVersion.VERSION_1_6
+    }
+
+    dependencies {
+        compile 'com.android.support:appcompat-v7:22.2.1'
+        compile 'com.android.support:support-v4:22.2.1'
     }
 }
 
