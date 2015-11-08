@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <declare-styleable name="ViewShadowOptions">
+        <attr name="layout_setShadow" format="boolean" />
+        <attr name="layout_setShadowOffset" format="integer" />
+    </declare-styleable>
+
+    <declare-styleable name="ViewDimensionOptions">
+        <attr name="layout_dimens_maxWidth" format="reference|dimension" />
+        <attr name="layout_dimens_minWidth" format="reference|dimension" />
+        <attr name="layout_dimens_maxHeight" format="reference|dimension" />
+        <attr name="layout_dimens_minHeight" format="reference|dimension" />
+
+        <attr name="layout_dimens_setWidthAsHeight" format="boolean" />
+        <attr name="layout_dimens_setHeightAsWidth" format="boolean" />
+    </declare-styleable>
+
+</resources>
