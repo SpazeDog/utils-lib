@@ -199,6 +199,10 @@ public class SparseList<T> extends MultiParcelableBuilder implements List<T> {
                 if (!addLast || location > mGCOffset) {
                     gc();
 
+                    if (addLast) {
+                        location = mListSize;
+                    }
+
                 } else if (!addLast) {
                     mGCOffset++;
                 }
