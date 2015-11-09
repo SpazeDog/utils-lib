@@ -32,7 +32,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class HashBundle extends MultiParcelableBuilder implements Cloneable {
+public class HashBundle implements MultiParcelable, Cloneable {
+
+    public static final MultiCreator<HashBundle> CREATOR = new MultiClassLoaderCreator<HashBundle>() {
+
+        @Override
+        public HashBundle createFromJSON(JSONParcel source, ClassLoader classLoader) throws JSONException {
+            return new HashBundle(source, classLoader);
+        }
+
+        @Override
+        public HashBundle createFromParcel(Parcel source) {
+            return new HashBundle(source, getClass().getClassLoader());
+        }
+
+        @Override
+        public HashBundle createFromParcel(Parcel source, ClassLoader classLoader) {
+            return new HashBundle(source, classLoader);
+        }
+
+        @Override
+        public HashBundle[] newArray(int size) {
+            return new HashBundle[size];
+        }
+    };
 
     public static final int PARCEL_ANDROID = 1;
     public static final int PARCEL_JSON = 2;
@@ -119,16 +142,15 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
              * We do not waste resources by unparceling everything just to get the size when someone uses #size()
              * Instead we cache the data size from the parcel data and use that when #size() is called while parceled
              */
-            mDataSize = source.readInt();           // The size of the HashBundle
 
             int offset = source.dataPosition();
+            mDataSize = source.readInt();           // The size of the HashBundle
 
             // Get past the data beloning to this instance
             source.setDataPosition(offset + size);
 
             mParcel = Parcel.obtain();
             mParcel.setDataPosition(0);
-            mParcel.writeInt(mDataSize);
             mParcel.appendFrom(source, offset, size);
             mParcel.setDataPosition(0);
 
@@ -155,14 +177,13 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
         int size = source.readInt();                // The size of the parcel data belonging to the HashBundle
 
         if (size > 0) {
-            mDataSize = source.readInt();           // The size of the HashBundle
             int offset = source.getDataPosition();
+            mDataSize = source.readInt();           // The size of the HashBundle
 
             // Get past the data beloning to this instance
             source.setDataPosition(offset + size);
 
             mJSONParcel = new JSONParcel();
-            mJSONParcel.writeInt(mDataSize);
             mJSONParcel.appendFrom(source, offset, size);
             mJSONParcel.setDataPosition(0);
 
@@ -248,8 +269,6 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
      */
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        super.writeToParcel(dest, flags);
-
         if (size() == 0) {
             dest.writeInt(0);
 
@@ -260,9 +279,9 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
             dest.appendFrom(mParcel, 0, size);
 
         } else {
-            int sizePos = dest.dataPosition();      // Position where our data begins
-            int beginPos = sizePos + 2;             // Position where the actual Map data begins
-            dest.writeInt(-1);                      // Placeholder for the total size of our data
+            int sizePos = dest.dataPosition();                                  // Position where our data begins
+            dest.writeInt(-1);                                                  // Placeholder for the total size of our data
+            int beginPos = dest.dataPosition();     // Position where the actual Map data begins
 
             parcel(dest, 0);
 
@@ -285,8 +304,6 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
      */
     @Override
     public void writeToJSON(JSONParcel dest) throws JSONException {
-        super.writeToJSON(dest);
-
         if (size() == 0) {
             dest.writeInt(0);
 
@@ -297,9 +314,9 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
             dest.appendFrom(mJSONParcel, 0, size);
 
         } else {
-            int sizePos = dest.getDataPosition();   // Position where our data begins
-            int beginPos = sizePos + 2;             // Position where the actual Map data begins
-            dest.writeInt(-1);                      // Placeholder for the total size of our data
+            int sizePos = dest.getDataPosition();                                   // Position where our data begins
+            dest.writeInt(-1);                                                      // Placeholder for the total size of our data
+            int beginPos = dest.getDataPosition();      // Position where the actual Map data begins
 
             parcel(dest, 0);
 
@@ -330,7 +347,7 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
                     Object value = mMap.get(key);
 
                     parcel.writeString(key);
-                    parcelData(value, parcel, flags);
+                    ParcelHelper.parcelData(value, parcel, flags);
                 }
 
                 break;
@@ -400,7 +417,7 @@ public class HashBundle extends MultiParcelableBuilder implements Cloneable {
 
                     for (int i=0; i < size; i++) {
                         key = mParcel.readString();
-                        value = unparcelData(mParcel, mClassLoader);
+                        value = ParcelHelper.unparcelData(mParcel, mClassLoader);
 
                         mMap.put(key, value);
                     }
