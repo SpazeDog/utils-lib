@@ -22,12 +22,18 @@ package com.spazedog.lib.utilsLib.app;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Build.VERSION;
+import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.FrameLayout.LayoutParams;
 
 import com.spazedog.lib.utilsLib.HashBundle;
 import com.spazedog.lib.utilsLib.R;
@@ -42,16 +48,28 @@ public class MsgFragmentDialog extends DialogFragment implements FragmentConnect
 
     private FragmentLogic FL_Logic;
 
+    private float mMaxHeight = -1;
+    private float mMaxWidth = -1;
+    private boolean mHasDialogLayout = false;
+    private ExtendedFrameLayout mFrameLayout;
+    private FrameLayout mRootLayout;
+
     public MsgFragmentDialog() {
         setArguments(new Bundle());
 
-        setStyle(0, R.style.App_Dialog);
+        setStyle(STYLE_NO_FRAME, 0);
     }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
-        dialog.getWindow().requestFeature(Window.FEATURE_NO_TITLE);
+        Window window = dialog.getWindow();
+        WindowManager.LayoutParams layoutParams = window.getAttributes();
+
+        window.setBackgroundDrawable(new ColorDrawable(0));
+        window.setAttributes(layoutParams);
+        window.setLayout(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+
         dialog.setCanceledOnTouchOutside(false);
 
         return dialog;
@@ -61,37 +79,118 @@ public class MsgFragmentDialog extends DialogFragment implements FragmentConnect
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View layout = onCreateWindowView(inflater, container, savedInstanceState);
 
-        if (layout != null) {
-            ExtendedFrameLayout layoutWrapper = new ExtendedFrameLayout(getActivity());
-            layoutWrapper.addView(layout);
+        if (layout == null) {
+            layout = onCreateDialogView(inflater, container, savedInstanceState);
 
-            if (Configuration.getDisplaySW() < 600) {
-                if (Configuration.inLandscape() && Configuration.getDisplayLW() >= 600) {
-                    layoutWrapper.setMaxHeight( Conversion.dipToPixels(Configuration.getDisplayHeight() * 0.95f) );
-                    layoutWrapper.setTotalWidth( Conversion.dipToPixels(Configuration.getDisplayWidth() * 0.75f) );
-
-                } else if (Configuration.getDisplayLW() >= 600) {
-                    layoutWrapper.setMaxHeight( Conversion.dipToPixels(Configuration.getDisplayHeight() * 0.90f) );
-                    layoutWrapper.setTotalWidth( Conversion.dipToPixels(Configuration.getDisplayWidth() * 0.90f) );
-
-                } else {
-                    layoutWrapper.setMaxHeight( Conversion.dipToPixels(Configuration.getDisplayHeight() * 0.95f) );
-                    layoutWrapper.setTotalWidth( Conversion.dipToPixels(Configuration.getDisplayWidth() * 0.95f) );
-                }
-
-            } else if (Configuration.inLandscape()) {
-                layoutWrapper.setMaxHeight( Conversion.dipToPixels(Configuration.getDisplayHeight() * 0.85f) );
-                layoutWrapper.setTotalWidth( Conversion.dipToPixels(Configuration.getDisplayWidth() * 0.45f) );
-
-            } else {
-                layoutWrapper.setMaxHeight( Conversion.dipToPixels(Configuration.getDisplayHeight() * 0.75f) );
-                layoutWrapper.setTotalWidth( Conversion.dipToPixels(Configuration.getDisplayWidth() * 0.65f) );
+            if (layout == null) {
+                return null;
             }
 
-            return layoutWrapper;
+            mHasDialogLayout = true;
         }
 
-        return layout;
+        if (mMaxHeight < 0) {
+            mMaxHeight = mHasDialogLayout ? 540f : 920f;
+        }
+
+        if (mMaxWidth < 0) {
+            mMaxWidth = mHasDialogLayout ? 360f : 560f;
+        }
+
+        mFrameLayout = new ExtendedFrameLayout(getActivity());
+        mFrameLayout.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        mFrameLayout.addView(layout);
+        if (VERSION.SDK_INT >= VERSION_CODES.JELLY_BEAN) {
+            mFrameLayout.setBackground(getResources().getDrawable(R.drawable.dialog_background));
+        } else {
+            mFrameLayout.setBackgroundDrawable(getResources().getDrawable(R.drawable.dialog_background));
+        }
+
+        mRootLayout = new FrameLayout(getActivity());
+        mRootLayout.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        mRootLayout.addView(mFrameLayout);
+
+        return mRootLayout;
+    }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        updateLayout();
+    }
+
+    private void updateLayout() {
+        if (mFrameLayout != null) {
+            boolean inLandscape = Configuration.inLandscape();
+            float displayHeight = Configuration.getDisplayHeight();
+            float displayWidth = Configuration.getDisplayWidth();
+            float displaySW = Configuration.getDisplaySW();
+            float displayLW = Configuration.getDisplayLW();
+            float spacingHeight = 0f;
+            float spacingWidth = 0f;
+
+            if (inLandscape && displayLW >= 600) {
+                spacingHeight = displaySW >= 600 ? 0.95f : 0.985f;
+                spacingWidth = mHasDialogLayout ? 0.75f : 0.85f;
+
+            } else if (!inLandscape && displayLW >= 600) {
+                spacingHeight = mHasDialogLayout ? 0.80f : 0.90f;
+
+                if (displaySW >= 340) {
+                    spacingWidth = mHasDialogLayout ? 0.87f : 0.97f;
+
+                } else {
+                    spacingWidth = mHasDialogLayout ? 0.95f : 0.985f;
+                }
+
+            } else if (inLandscape) {
+                spacingHeight = 0.985f;
+                spacingWidth = mHasDialogLayout ? 0.95f : 0.985f;
+
+            } else {
+                spacingHeight = mHasDialogLayout ? 0.95f : 0.985f;
+                spacingWidth = mHasDialogLayout ? 0.95f : 0.985f;
+            }
+
+            float height = displayHeight * spacingHeight;
+            float width = displayWidth * spacingWidth;
+
+            if (height > mMaxHeight) {
+                float newSpacingHeight = mMaxHeight / displayHeight;
+
+                if (newSpacingHeight < spacingHeight) {
+                    spacingHeight = newSpacingHeight;
+                }
+            }
+
+            if (width > mMaxWidth) {
+                float newSpacingWidth = mMaxWidth / displayWidth;
+
+                if (newSpacingWidth < spacingWidth) {
+                    spacingWidth = newSpacingWidth;
+                }
+            }
+
+            int paddingHeight = Conversion.dipToPixels( ((displayHeight * (1f - spacingHeight)) / 2) );
+            int paddingWidth = Conversion.dipToPixels( ((displayWidth * (1f - spacingWidth)) / 2) );
+
+            mFrameLayout.setMaxHeight(Conversion.dipToPixels(displayHeight));
+            mFrameLayout.setTotalWidth(Conversion.dipToPixels(displayWidth));
+
+            mRootLayout.setPadding(paddingWidth, paddingHeight, paddingWidth, paddingHeight);
+        }
+    }
+
+    public void setMaxSize(float maxWidth, float maxHeight) {
+        mMaxHeight = maxHeight;
+        mMaxWidth = maxWidth;
+
+        updateLayout();
+    }
+
+    public View onCreateDialogView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return null;
     }
 
     public View onCreateWindowView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

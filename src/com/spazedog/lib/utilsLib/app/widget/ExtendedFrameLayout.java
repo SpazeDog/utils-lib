@@ -8,6 +8,8 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.FrameLayout;
 
 import com.spazedog.lib.utilsLib.R;
@@ -45,8 +47,23 @@ public class ExtendedFrameLayout extends FrameLayout implements ExtendedView {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Integer width = MeasureSpec.getSize(widthMeasureSpec);
-        Integer height = MeasureSpec.getSize(heightMeasureSpec);
+        int width = MeasureSpec.getSize(widthMeasureSpec);
+        int height = MeasureSpec.getSize(heightMeasureSpec);
+        int maxWidth = mMaxWidth;
+        int maxHeight = mMaxHeight;
+        int minWidth = mMinWidth;
+        int minHeight = mMinHeight;
+
+        if (getParent() instanceof ViewGroup) {
+            ViewGroup parent = (ViewGroup) getParent();
+            int paddingVertical = parent.getPaddingTop() + parent.getPaddingBottom();
+            int paddingHorizontal = parent.getPaddingLeft() + parent.getPaddingRight();
+
+            maxWidth -= paddingHorizontal;
+            maxHeight -= paddingVertical;
+            minWidth -= paddingHorizontal;
+            minHeight -= paddingVertical;
+        }
 
         if (mAdoptWidth && width != height) {
             width = height;
@@ -58,13 +75,13 @@ public class ExtendedFrameLayout extends FrameLayout implements ExtendedView {
             heightMeasureSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.getMode(widthMeasureSpec));
         }
 
-        if ((mMaxWidth > 0 && width > mMaxWidth) || (mMinWidth > 0 && width < mMinWidth)) {
-            width = mMaxWidth > 0 && width > mMaxWidth ? mMaxWidth : mMinWidth;
+        if ((maxWidth > 0 && width > maxWidth) || (minWidth > 0 && width < minWidth)) {
+            width = maxWidth > 0 && width > maxWidth ? maxWidth : minWidth;
             widthMeasureSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.getMode(widthMeasureSpec));
         }
 
-        if ((mMaxHeight > 0 && height > mMaxHeight) || (mMinHeight > 0 && height < mMinHeight)) {
-            height = mMaxHeight > 0 && height > mMaxHeight ? mMaxHeight : mMinHeight;
+        if ((maxHeight > 0 && height > maxHeight) || (minHeight > 0 && height < minHeight)) {
+            height = maxHeight > 0 && height > maxHeight ? maxHeight : minHeight;
             heightMeasureSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.getMode(heightMeasureSpec));
         }
 
