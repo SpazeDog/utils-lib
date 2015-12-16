@@ -7,6 +7,16 @@ A general utility library for Android Development
 ### Include Library
 -----------
 
+**Maven**
+
+Reflect Tools is available in Maven respository at [Bintray](https://bintray.com/dk-zero-cool/maven/utils-lib/view) and can be accessed via jCenter. 
+
+```
+dependencies {
+    compile 'com.spazedog.lib:utils-lib'
+}
+```
+
 **Android Studio**
 
 First download the [utilsLib-release.aar](https://github.com/SpazeDog/utils-lib/raw/1.x/projects/utilsLib-release.aar) file. 
