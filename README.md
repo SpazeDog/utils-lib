@@ -9,7 +9,7 @@ A general utility library for Android Development
 
 **Maven**
 
-Reflect Tools is available in Maven respository at [Bintray](https://bintray.com/dk-zero-cool/maven/utils-lib/view) and can be accessed via jCenter. 
+The Utility Library is available in Maven respository at [Bintray](https://bintray.com/dk-zero-cool/maven/utils-lib/view) and can be accessed via jCenter. 
 
 ```
 dependencies {
