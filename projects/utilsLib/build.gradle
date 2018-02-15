@@ -3,14 +3,14 @@ apply plugin: 'com.android.library'
 buildDir = "${System.properties['user.home']}/.gradle/build/${rootProject.name}/${project.name}"
 
 android {
-    compileSdkVersion 22
-    buildToolsVersion "22.0.1"
+    compileSdkVersion 30
+    buildToolsVersion '25.0.0'
 
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 22
         versionCode 4
-        versionName "1.2.2"
+        versionName "2.0.0"
     }
 
     sourceSets {
@@ -31,8 +31,7 @@ android {
     }
 
     dependencies {
-        compile 'com.android.support:appcompat-v7:22.2.1'
-        compile 'com.android.support:support-v4:22.2.1'
+        
     }
 }
 
