@@ -20,6 +20,8 @@
 package com.spazedog.lib.utilsLib.os;
 
 
+import android.annotation.TargetApi;
+import android.os.Build.VERSION_CODES;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -33,6 +35,9 @@ import android.os.Process;
  */
 public class ThreadHandler extends Handler {
 
+    /**
+     *
+     */
     protected static Looper createLooper(String name, int priority) {
         HandlerThread thread = new HandlerThread(name, priority);
         thread.start();
@@ -40,23 +45,47 @@ public class ThreadHandler extends Handler {
         return thread.getLooper();
     }
 
+    /**
+     *
+     */
     public ThreadHandler(String name) {
         this(name, Process.THREAD_PRIORITY_BACKGROUND, null);
     }
 
+    /**
+     *
+     */
     public ThreadHandler(String name, int priority) {
         this(name, priority, null);
     }
 
+    /**
+     *
+     */
     public ThreadHandler(String name, int priority, Callback callback) {
         super(createLooper(name, priority), callback);
     }
 
-    public void close() {
+    /**
+     *
+     */
+    public void terminate() {
         Looper looper = getLooper();
 
         if (looper != null) {
             looper.quit();
+        }
+    }
+
+    /**
+     *
+     */
+    @TargetApi(VERSION_CODES.JELLY_BEAN_MR2)
+    public void shutdown() {
+        Looper looper = getLooper();
+
+        if (looper != null) {
+            looper.quitSafely();
         }
     }
 }
